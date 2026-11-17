@@ -215,3 +215,5 @@ app.listen(PORT, () => {
   console.log(`   POST http://localhost:${PORT}/api/analyze-document`);
   console.log(`   POST http://localhost:${PORT}/api/ask-question\n`);
 });
+
+module.exports = app;
