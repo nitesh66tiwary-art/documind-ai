@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
 
 const SAMPLE_POLICY = `COMMERCIAL VENDOR & DRIVER AGREEMENT - SECTION 4: VEHICLE ROADSIDE ASSISTANCE
 Coverage Limits:
