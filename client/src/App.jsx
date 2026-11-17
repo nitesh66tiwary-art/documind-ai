@@ -36,13 +36,23 @@ function App() {
     fetchSavedDocs();
   }, []);
 
-  const fetchHealth = async () => {
+  const fetchHealth = async (retries = 2) => {
     try {
       const res = await fetch(`${API_BASE}/health`);
       const data = await res.json();
-      setDbStatus(data.database === 'CONNECTED' ? '🍃 MongoDB Connected' : '⚠️ DB Disconnected');
+      if (data.database === 'CONNECTED') {
+        setDbStatus('🍃 MongoDB Connected');
+      } else if (retries > 0) {
+        setTimeout(() => fetchHealth(retries - 1), 1200);
+      } else {
+        setDbStatus('⚠️ DB Disconnected');
+      }
     } catch {
-      setDbStatus('❌ Backend Offline');
+      if (retries > 0) {
+        setTimeout(() => fetchHealth(retries - 1), 1200);
+      } else {
+        setDbStatus('❌ Backend Offline');
+      }
     }
   };
 

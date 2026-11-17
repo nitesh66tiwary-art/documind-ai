@@ -17,12 +17,38 @@ app.use(cors());
 app.use(express.json());
 
 // -------------------------------------------------------------
-// MongoDB Connection
+// MongoDB Serverless Connection Cache
 // -------------------------------------------------------------
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/documind-ai';
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('🍃 Connected to MongoDB (documind-ai)'))
-  .catch(err => console.warn('⚠️ MongoDB not running locally. (Server will still run, but won\'t save history):', err.message));
+
+let cachedPromise = null;
+
+async function connectToDatabase() {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose;
+  }
+  if (!cachedPromise) {
+    cachedPromise = mongoose.connect(MONGO_URI);
+  }
+  try {
+    await cachedPromise;
+    console.log('🍃 Connected to MongoDB');
+  } catch (err) {
+    cachedPromise = null;
+    throw err;
+  }
+  return mongoose;
+}
+
+// Middleware: Ensures MongoDB handshake completes before any route runs
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+  } catch (err) {
+    console.warn('⚠️ DB Connection warning:', err.message);
+  }
+  next();
+});
 
 // Initialize Gemini Client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -56,7 +82,13 @@ async function generateWithFallback(prompt, systemInstruction = '', maxRetries =
 // -------------------------------------------------------------
 // Endpoint 1: Health Check
 // -------------------------------------------------------------
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  try {
+    await connectToDatabase();
+  } catch (err) {
+    console.warn('Health check DB error:', err.message);
+  }
+
   res.json({
     status: 'UP',
     database: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
